@@ -3,28 +3,17 @@
 #---------------------------------------------------------------
 # author:"Haxhimitsu"
 # date  :"2021/01/06"
-# cite  :
-# sample:python3 tf_sample_ver2.0.py  --train_path  ~/Desktop/dataset_smple/train/ --val_path ~/Desktop/dataset_smple/val/  --log_dir  ../test/ --test_data_path ~/Desktop/dataset_smple/test/
-
+# cite  :https://github.com/YutaroOgawa/pytorch_advanced/blob/master/6_gan_anomaly_detection/6-4_EfficientGAN.ipynb
+# useage:python3 tf_sample_ver2.0.py  --train_path  ~/Desktop/dataset_smple/train/ --val_path ~/Desktop/dataset_smple/val/  --log_dir  ../test/ --test_data_path ~/Desktop/dataset_smple/test/
 #---------------------------------------------------------------
-
-import keras
-from keras.utils import np_utils
-from keras.layers.convolutional import Conv2D, MaxPooling2D
-from keras.models import Sequential
-from keras.layers.core import Dense, Dropout, Activation, Flatten
-from keras.preprocessing.image import array_to_img, img_to_array, load_img
-import keras.callbacks
-from keras.models import Sequential, model_from_json
-import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
-from tensorflow.keras.callbacks import EarlyStopping
+import torch
+import torch.utils.data as data
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 
 import numpy as np
-#import pandas as pd
-#from sklearn.model_selection import train_test_split
-#import matplotlib.pyplot as plt
-import cv2
+
 import os
 import csv
 import copy
@@ -33,7 +22,7 @@ import argparse
 import sys
 #my module
 
-from utils.data_loader import data_loader
+from utils.data_loader import data_loader,GAN_Img_Dataset,ImageTransform
 
 data_load=data_loader()
 data_load.sayStr("Hello")
@@ -66,14 +55,23 @@ if a.val_path is None:
 else:
     val_path=a.val_path
 
-
+#create_data_path_list
 train_img_list,val_img_list=data_load.create_dataset(train_path,val_path)
-#################setting GPU useage#####################
-config = tf.ConfigProto(
-    gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.9, # 最大値の80%まで
-        allow_growth=True # True->必要になったら確保, False->全部
-      ))
-sess = sess = tf.Session(config=config)
+print("train_img_list\n",train_img_list)
+print("val_img list\n",train_img_list)
 
-#####################################################
+#create_data_set
+mean=(0.5,)
+std=(0.5,)
+train_dataset=GAN_Img_Dataset(
+    file_list=train_img_list,transform=ImageTransform(mean,std)
+)
+#create_data_loader
+batch_size = 2
+train_dataloader = torch.utils.data.DataLoader(
+    train_dataset, batch_size=batch_size, shuffle=True)
 
+# 動作の確認
+batch_iterator = iter(train_dataloader)  # イテレータに変換
+imges = next(batch_iterator)  # 1番目の要素を取り出す
+print(imges.size())  # torch.Size([64, 1, 64, 64])

@@ -11,9 +11,15 @@ import numpy as np
 #import pandas as pd
 #from sklearn.model_selection import train_test_split
 #import matplotlib.pyplot as plt
-
+import torch
+import torch.utils.data as data
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torchvision import transforms
 
 import os
+from PIL import Image
 
 class data_loader:
 
@@ -43,16 +49,48 @@ class data_loader:
                 ValIMG.append(val_img_path)
 
             print("now:" + img_dirs[i])
+            #print("train_img_list\n",TrainIMG)
+            #print("val_img list\n",ValIMG)
 
-            print("train_img_list\n",TrainIMG)
-            print("val_img list\n",ValIMG)
-
-            return TrainIMG,ValIMG
-
-
-
+        return TrainIMG,ValIMG
+    
     def sayStr(self, str):
         print (str)
+
+
+class ImageTransform():
+    """画像の前処理クラス"""
+
+    def __init__(self, mean, std):
+        self.data_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
+
+    def __call__(self, img):
+        return self.data_transform(img)
+
+class GAN_Img_Dataset(data.Dataset):
+    """画像のDatasetクラス。PyTorchのDatasetクラスを継承"""
+
+    def __init__(self, file_list, transform):
+        self.file_list = file_list
+        self.transform = transform
+
+    def __len__(self):
+        '''画像の枚数を返す'''
+        return len(self.file_list)
+
+    def __getitem__(self, index):
+        '''前処理をした画像のTensor形式のデータを取得'''
+
+        img_path = self.file_list[index]
+        img = Image.open(img_path)  # [高さ][幅]白黒
+
+        # 画像の前処理
+        img_transformed = self.transform(img)
+
+        return img_transformed
 
 if __name__ == '__main__':
     test = data_loader()
