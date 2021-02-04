@@ -152,7 +152,7 @@ class Encoder(nn.Module):
 
 if __name__ == '__main__':
 
-    
+    """
     #generator check prog
     G = Generator(z_dim=20)
     G.train()
@@ -189,3 +189,4 @@ if __name__ == '__main__':
 
     print(z.shape)
     print(z)
+    """
