@@ -25,12 +25,14 @@ import matplotlib.pyplot as plt
 #my create original module
 from utils.data_loader import data_loader,GAN_Img_Dataset,ImageTransform
 from utils.gan_model import Generator,Discriminator,Encoder
+from utils.anomaly_score import Anomaly_score
 from train import train
+from utils.os_control import file_control
 
 data_load=data_loader()
-#data_load.sayStr("Hello")
-#test=train()
-#test.sayStr("test")
+train=train()
+file_control=file_control()
+
 
 # Setup seeds
 torch.manual_seed(1234)
@@ -46,11 +48,15 @@ parser.add_argument("--val_path",  help="set image size e.g.'0.5,0.8...'")
 parser.add_argument("--max_epochs", type =int ,default=30,help="set trim width")
 parser.add_argument("--save_weight_name", type=str,default="test",help="set trim height")
 #parser.add_argument("--test_path",  help="output path")
-parser.add_argument("--log_dir",  help="log_path")
+parser.add_argument("--log_dir",  default="./log/",help="log_path")
 a = parser.parse_args()
 
 log_dir=a.log_dir
-#myutil.create_directory(log_dir)
+#create log directory
+file_control.create_directory(log_dir)
+img_log=log_dir+"images/"
+file_control.create_directory(img_log)
+
 #weight_filename=a.save_weight_name+".hdf5"
 #max_epochs=a.max_epochs
 
@@ -66,10 +72,10 @@ else:
     val_path=a.val_path
 
 #create_data_path_list
-print(val_path)
+#print(val_path)
 train_img_list,val_img_list=data_load.create_dataset(train_path=train_path,val_path=val_path)
 #print("train_img_list\n",train_img_list)
-print("val_img list\n",val_img_list)
+#print("val_img list\n",val_img_list)
 
 #create_data_set
 mean=(0.5,)
@@ -92,13 +98,13 @@ train_dataloader = torch.utils.data.DataLoader(
 
 
 # show train image and test image
-train_batch_iterator = iter(train_dataloader)
-test_batch_iterator = iter(test_dataloader)  # イテレータに変換
-train_images = next(train_batch_iterator)
-test_images = next(test_batch_iterator)  # 1番目の要素を取り出す
+train_batch_iterator = iter(train_dataloader)# イテレータに変換
+test_batch_iterator = iter(test_dataloader)
+train_images = next(train_batch_iterator)#1番目の要素を取り出す
+test_images = next(test_batch_iterator)
 #use matplot lib
 fig = plt.figure(figsize=(15, 6))
-## vew  test data
+# view data
 for i in range(0, 5):
     # upper columm is train data
     plt.subplot(2, 5, i+1)
@@ -106,8 +112,7 @@ for i in range(0, 5):
     # under columm is test data
     plt.subplot(2, 5, 5+i+1)
     plt.imshow(test_images[i][0].cpu().detach().numpy(), 'gray')
-    
-plt.savefig("view_traindata_test_data"+".pdf",dpi=500)
+plt.savefig(img_log+"view_traindata_test_data"+".pdf",dpi=500)
 #print(test_images.size())  # torch.Size([64, 1, 64, 64])
 
 #init network weight
@@ -143,35 +148,6 @@ num_epochs = 150
 G_update, D_update, E_update = train.train_model(G, D, E, dataloader=train_dataloader, num_epochs=num_epochs)
 
 ##test
-
-
-def Anomaly_score(x, fake_img, z_out_real, D, Lambda=0.1):
-
-    # テスト画像xと生成画像fake_imgのピクセルレベルの差の絶対値を求めて、ミニバッチごとに和を求める
-    residual_loss = torch.abs(x-fake_img)
-    residual_loss = residual_loss.view(residual_loss.size()[0], -1)
-    residual_loss = torch.sum(residual_loss, dim=1)
-
-    # テスト画像xと生成画像fake_imgを識別器Dに入力し、特徴量マップを取り出す
-
-    _, x_feature = D(x, z_out_real)
-    _, G_feature = D(fake_img, z_out_real)
-
-    # テスト画像xと生成画像fake_imgの特徴量の差の絶対値を求めて、ミニバッチごとに和を求める
-    discrimination_loss = torch.abs(x_feature-G_feature)
-    discrimination_loss = discrimination_loss.view(
-        discrimination_loss.size()[0], -1)
-    discrimination_loss = torch.sum(discrimination_loss, dim=1)
-
-    # ミニバッチごとに2種類の損失を足し算する
-    loss_each = (1-Lambda)*residual_loss + Lambda*discrimination_loss
-
-    # ミニバッチ全部の損失を求める
-    total_loss = torch.sum(loss_each)
-
-    return total_loss, loss_each, residual_loss
-
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("使用デバイス：", device)
 
@@ -185,8 +161,10 @@ G_update.eval()
 z_out_real = E_update(test_images.to(device))
 imges_reconstract = G_update(z_out_real)
 
+a_score=Anomaly_score()
+
 # 損失を求める
-loss, loss_each, residual_loss_each = Anomaly_score(
+loss, loss_each, residual_loss_each = a_score.caloc_anomaly_score(
     x, imges_reconstract, z_out_real, D_update, Lambda=0.1)
 
 # 損失の計算。トータルの損失
@@ -196,7 +174,7 @@ print("total loss：", np.round(loss_each, 0))
 # 画像を可視化
 fig = plt.figure(figsize=(15, 6))
 for i in range(0, 5):
-    # 上段に訓練データを
+
     plt.subplot(3, 5, i+1)
     plt.imshow(train_images[i][0].cpu().detach().numpy(), 'gray')
     
@@ -207,4 +185,4 @@ for i in range(0, 5):
     plt.subplot(3, 5, 10+i+1)
     plt.imshow(imges_reconstract[i][0].cpu().detach().numpy(), 'gray')
     
-plt.savefig("test_compare"+".png",dpi=500)
+plt.savefig(img_log+"test_compare"+"pdf",dpi=500)
