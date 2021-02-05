@@ -152,13 +152,13 @@ class Encoder(nn.Module):
 
 if __name__ == '__main__':
 
-    """
+    
     #generator check prog
     G = Generator(z_dim=20)
     G.train()
     # 入力する乱数
     # バッチノーマライゼーションがあるのでミニバッチ数は2以上
-    input_z = torch.randn(2, 20)
+    input_z = torch.randn(64, 20)
     # 偽画像を出力
     fake_images = G(input_z)  # torch.Size([2, 1, 28, 28])
     img_transformed = fake_images[0][0].detach().numpy()
@@ -169,24 +169,24 @@ if __name__ == '__main__':
     D = Discriminator(z_dim=20)
 
     # 偽画像を生成
-    input_z = torch.randn(2, 20)
+    #input_z = torch.randn(2, 20)
     fake_images = G(input_z)
 
     # 偽画像をDに入力
     d_out, _ = D(fake_images, input_z)
-
+    print("d_out.size()",d_out.size())
     # 出力d_outにSigmoidをかけて0から1に変換
-    print(nn.Sigmoid()(d_out))
+    #print(nn.Sigmoid()(d_out))
     
     #Encoder check
     E = Encoder(z_dim=20)
 
     # 入力する画像データ
     x = fake_images  # fake_imagesは上のGで作成したもの
-
+    print(fake_images.shape)
     # 画像からzをEncode
     z = E(x)
 
     print(z.shape)
     print(z)
-    """
+    
