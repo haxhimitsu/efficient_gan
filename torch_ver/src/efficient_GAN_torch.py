@@ -185,4 +185,4 @@ for i in range(0, 5):
     plt.subplot(3, 5, 10+i+1)
     plt.imshow(imges_reconstract[i][0].cpu().detach().numpy(), 'gray')
     
-plt.savefig(img_log+"test_compare"+"pdf",dpi=500)
+plt.savefig(img_log+"test_compare"+".pdf",dpi=500)
