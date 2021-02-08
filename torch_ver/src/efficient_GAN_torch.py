@@ -56,7 +56,8 @@ log_dir=a.log_dir
 file_control.create_directory(log_dir)
 img_log=log_dir+"images/"
 file_control.create_directory(img_log)
-
+model_log=log_dir+"models/"
+file_control.create_directory(model_log)
 #weight_filename=a.save_weight_name+".hdf5"
 #max_epochs=a.max_epochs
 
@@ -95,7 +96,6 @@ test_dataloader = torch.utils.data.DataLoader(
 batch_size = 64
 train_dataloader = torch.utils.data.DataLoader(
     train_dataset, batch_size=batch_size, shuffle=True)
-
 
 # show train image and test image
 train_batch_iterator = iter(train_dataloader)# イテレータに変換
@@ -144,45 +144,81 @@ print("init network weights!!")
 
 
 # 学習・検証
-num_epochs = 150
+num_epochs = 1500
 G_update, D_update, E_update = train.train_model(G, D, E, dataloader=train_dataloader, num_epochs=num_epochs)
+print("train_finished")
+##save model
+torch.save(G_update.state_dict(),model_log+"Generator.pth")
+torch.save(E_update.state_dict(),model_log+"Encoder.pth")
+torch.save(D_update.state_dict(),model_log+"Discriminator.pth")
+print("save at network model to",model_log)
+
+
 
 ##test
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("使用デバイス：", device)
 
+G_updates=Generator().to(device)
+E_updates=Encoder().to(device)
+D_updates=Discriminator().to(device)
+print("now_test_sequence!")
+G_updates.load_state_dict(torch.load(model_log+"Generator.pth",map_location=device))
+E_updates.load_state_dict(torch.load(model_log+"Encoder.pth"))
+D_updates.load_state_dict(torch.load(model_log+"Discriminator.pth"))
+
+
 # 異常検知したい画像
 x = test_images[0:5]
 x = x.to(device)
-
 # 教師データの画像をエンコードしてzにしてから、Gで生成
-E_update.eval()
-G_update.eval()
-z_out_real = E_update(test_images.to(device))
-imges_reconstract = G_update(z_out_real)
+E_updates.eval()
+G_updates.eval()
+z_out_real = E_updates(test_images.to(device))
+imges_reconstract = G_updates(z_out_real)
 
 a_score=Anomaly_score()
-
 # 損失を求める
 loss, loss_each, residual_loss_each = a_score.caloc_anomaly_score(
     x, imges_reconstract, z_out_real, D_update, Lambda=0.1)
-
 # 損失の計算。トータルの損失
 loss_each = loss_each.cpu().detach().numpy()
-print("total loss：", np.round(loss_each, 0))
+print("valid_label_total loss：", np.round(loss_each, 0))
 
-# 画像を可視化
+
+batch_size = 5
+train_test_dataloader = torch.utils.data.DataLoader(
+    train_dataset, batch_size=batch_size, shuffle=True)
+train_test_batch_iterator = iter(train_test_dataloader)# イテレータに変換
+train_test_images = next(train_test_batch_iterator)#1番目の要素を取り出す
+##generate_train_image
+train_x=train_test_images[0:5]
+train_x=train_x.to(device)
+E_updates.eval()
+G_updates.eval()
+train_z_out_real=E_updates(train_test_images.to(device))
+train_images_reconstract=G_updates(train_z_out_real)
+a_score=Anomaly_score()
+train_loss, train_loss_each, train_residual_loss_each = a_score.caloc_anomaly_score(
+    train_x, train_images_reconstract, train_z_out_real, D_update, Lambda=0.1)
+train_loss_each = train_loss_each.cpu().detach().numpy()
+print("train_label_total loss：", np.round(train_loss_each, 0))
+
+
+# view image
 fig = plt.figure(figsize=(15, 6))
 for i in range(0, 5):
-
-    plt.subplot(3, 5, i+1)
-    plt.imshow(train_images[i][0].cpu().detach().numpy(), 'gray')
-    
-    plt.subplot(3, 5, 5+i+1)
+    ##trained_same_label_img
+    plt.subplot(4, 5, i+1)
+    plt.imshow(train_test_images[i][0].cpu().detach().numpy(), 'gray')
+    ##trained_generated_same_label_img
+    plt.subplot(4, 5, 5+i+1)
+    plt.imshow(train_images_reconstract[i][0].cpu().detach().numpy(), 'gray')
+    ##test_img_(different label)
+    plt.subplot(4, 5, 10+i+1)
     plt.imshow(test_images[i][0].cpu().detach().numpy(), 'gray')
-    
-    # 下段に生成データを表示する
-    plt.subplot(3, 5, 10+i+1)
+    # testlabel_generated_image(different label)
+    plt.subplot(4, 5, 15+i+1)
     plt.imshow(imges_reconstract[i][0].cpu().detach().numpy(), 'gray')
-    
+##save pdf to log folder
 plt.savefig(img_log+"test_compare"+".pdf",dpi=500)
