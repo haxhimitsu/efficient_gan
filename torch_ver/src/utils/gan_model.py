@@ -24,6 +24,9 @@ from torchvision import transforms
 
 
 
+
+#128pixel-32
+#256pixel-64
 class Generator(nn.Module):
 
     def __init__(self, z_dim=20):
@@ -35,8 +38,8 @@ class Generator(nn.Module):
             nn.ReLU(inplace=True))
 
         self.layer2 = nn.Sequential(
-            nn.Linear(1024, 7*7*128),
-            nn.BatchNorm1d(7*7*128),
+            nn.Linear(1024, 32*32*128),
+            nn.BatchNorm1d(32*32*128),
             nn.ReLU(inplace=True))
 
         self.layer3 = nn.Sequential(
@@ -46,19 +49,21 @@ class Generator(nn.Module):
             nn.ReLU(inplace=True))
 
         self.last = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=64, out_channels=1,
+            nn.ConvTranspose2d(in_channels=64, out_channels=3,
                                kernel_size=4, stride=2, padding=1),
             nn.Tanh())
-        # 注意：白黒画像なので出力チャネルは1つだけ
+        # 注意：出力チャネルは3つだけ
 
     def forward(self, z):
         out = self.layer1(z)
         out = self.layer2(out)
 
         # 転置畳み込み層に入れるためにテンソルの形を整形
-        out = out.view(z.shape[0], 128, 7, 7)
+        out = out.view(z.shape[0], 128, 32, 32)
         out = self.layer3(out)
+        #print(out.size())
         out = self.last(out)
+        #print(out.size())
 
         return out
 
@@ -69,10 +74,10 @@ class Discriminator(nn.Module):
 
         # 画像側の入力処理
         self.x_layer1 = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=4,
+            nn.Conv2d(3, 64, kernel_size=4,
                       stride=2, padding=1),
             nn.LeakyReLU(0.1, inplace=True))
-        # 注意：白黒画像なので入力チャネルは1つだけ
+        # 注意：入力チャネルは3
 
         self.x_layer2 = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=4,
@@ -81,13 +86,11 @@ class Discriminator(nn.Module):
             nn.LeakyReLU(0.1, inplace=True))
 
         # 乱数側の入力処理
-        self.z_layer1 = nn.Linear(z_dim, 512)
+        self.z_layer1 = nn.Linear(z_dim,512)
 
-        # 最後の判定
-        self.last1 = nn.Sequential(
-            nn.Linear(3648, 1024),
-            nn.LeakyReLU(0.1, inplace=True))
-
+        # 最後の判定 512+64*7*7=3648
+        #self.last1 = nn.Sequential(nn.Linear(3648, 1024),nn.LeakyReLU(0.1, inplace=True))
+        self.last1 = nn.Sequential(nn.Linear(66048, 1024),nn.LeakyReLU(0.1, inplace=True))
         self.last2 = nn.Linear(1024, 1)
 
     def forward(self, x, z):
@@ -95,13 +98,18 @@ class Discriminator(nn.Module):
         # 画像側の入力処理
         x_out = self.x_layer1(x)
         x_out = self.x_layer2(x_out)
+        #print("layer2_passed_size",x_out.size())
 
         # 乱数側の入力処理
         z = z.view(z.shape[0], -1)
+        #print("z",z.size())
         z_out = self.z_layer1(z)
+        #print("z_out.size()",z_out.size())
 
         # x_outとz_outを結合し、全結合層で判定
-        x_out = x_out.view(-1, 64 * 7 * 7)
+        x_out = x_out.view(-1, 64 * 32 * 32)##change_imagesize
+        #x_outs = x_out.view(-1, 64 * 7 * 7)
+        #print("x_outs.size()",x_out.size())
         out = torch.cat([x_out, z_out], dim=1)
         out = self.last1(out)
 
@@ -118,7 +126,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3,
+            nn.Conv2d(3, 32, kernel_size=3,
                       stride=1),
             nn.LeakyReLU(0.1, inplace=True))
         # 注意：白黒画像なので入力チャネルは1つだけ
@@ -135,8 +143,8 @@ class Encoder(nn.Module):
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.1, inplace=True))
 
-        # ここまでで画像のサイズは7×7になっている
-        self.last = nn.Linear(128 * 7 * 7, z_dim)
+        # ここまでで画像のサイズは[128,128]to 32×32になっている
+        self.last = nn.Linear(128 * 32 * 32, z_dim)
 
     def forward(self, x):
         out = self.layer1(x)
@@ -144,7 +152,7 @@ class Encoder(nn.Module):
         out = self.layer3(out)
 
         # FCに入れるためにテンソルの形を整形
-        out = out.view(-1, 128 * 7 * 7)
+        out = out.view(-1, 128 * 32 * 32)##cahneg
         out = self.last(out)
 
         return out
@@ -170,7 +178,7 @@ if __name__ == '__main__':
 
     # 偽画像を生成
     #input_z = torch.randn(2, 20)
-    fake_images = G(input_z)
+    print("fake_image_size",fake_images.size())
 
     # 偽画像をDに入力
     d_out, _ = D(fake_images, input_z)
