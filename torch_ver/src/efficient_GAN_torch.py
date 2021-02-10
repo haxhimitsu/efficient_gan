@@ -167,6 +167,7 @@ elif a.mode=="test":
     G_updates.load_state_dict(torch.load(model_log+"Generator.pth",map_location=device))
     E_updates.load_state_dict(torch.load(model_log+"Encoder.pth",map_location=device))
     D_updates.load_state_dict(torch.load(model_log+"Discriminator.pth",map_location=device))
+    print("load at network model to",model_log)
     print("now_test_sequence!")
 
     # 異常検知したい画像
