@@ -45,7 +45,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dataset_path",required=True,help="path to root dataset directory")
 parser.add_argument("--train_path",help="path to train_data")
 parser.add_argument("--val_path",  help="set image size e.g.'0.5,0.8...'")
-parser.add_argument("--max_epochs", type =int ,default=10,help="set trim width")
+parser.add_argument("--max_epochs", type =int ,default=1000,help="set trim width")
 parser.add_argument("--save_weight_name", type=str,default="test",help="set trim height")
 parser.add_argument("--batch_size", default=128, type=int,help="output path")
 parser.add_argument("--log_dir",  default="./log/",help="log_path")
@@ -222,3 +222,10 @@ elif a.mode=="test":
         plt.imshow(imges_reconstract[i][0].cpu().detach().numpy())
     ##save pdf to log folder
     plt.savefig(img_log+"test_compare"+".pdf",dpi=500)
+
+    print(a.log_dir+"result.csv")
+    with open(a.log_dir+"result.csv", 'a') as f:
+        writer = csv.writer(f)
+        writer.writerow([a.result_dir,train_label_avg_loss,valid_label_total_loss_avg])
+        #writer.writerow(['a', 'b', 'c'])
+    f.close()
