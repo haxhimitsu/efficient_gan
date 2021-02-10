@@ -11,6 +11,7 @@ import torch.utils.data as data
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torchvision.utils import save_image
 
 import numpy as np
 import time
@@ -45,7 +46,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dataset_path",required=True,help="path to root dataset directory")
 parser.add_argument("--train_path",help="path to train_data")
 parser.add_argument("--val_path",  help="set image size e.g.'0.5,0.8...'")
-parser.add_argument("--max_epochs", type =int ,default=500,help="set trim width")
+parser.add_argument("--max_epochs", type =int ,default=100,help="set trim width")
 parser.add_argument("--save_weight_name", type=str,default="test",help="set trim height")
 parser.add_argument("--batch_size", default=64, type=int,help="output path")
 parser.add_argument("--log_dir",  default="./log/",help="log_path")
@@ -58,6 +59,8 @@ log_dir=a.log_dir
 file_control.create_directory(log_dir)
 img_log=a.result_dir+"images/"
 file_control.create_directory(img_log)
+generated_img=a.result_dir+"generate_image/"
+file_control.create_directory(generated_img)
 model_log=log_dir+"models/"
 file_control.create_directory(model_log)
 num_epochs =a.max_epochs
@@ -133,9 +136,9 @@ def weights_init(m):
         m.bias.data.fill_(0)
 
 #create_model
-G = Generator(z_dim=20)
-D = Discriminator(z_dim=20)
-E = Encoder(z_dim=20)
+G = Generator(z_dim=30)
+D = Discriminator(z_dim=30)
+E = Encoder(z_dim=30)
 
 #adapt init func
 G.apply(weights_init)
@@ -162,8 +165,8 @@ elif a.mode=="test":
     D_updates=Discriminator().to(device)
     #load saved net work model
     G_updates.load_state_dict(torch.load(model_log+"Generator.pth",map_location=device))
-    E_updates.load_state_dict(torch.load(model_log+"Encoder.pth"))
-    D_updates.load_state_dict(torch.load(model_log+"Discriminator.pth"))
+    E_updates.load_state_dict(torch.load(model_log+"Encoder.pth",map_location=device))
+    D_updates.load_state_dict(torch.load(model_log+"Discriminator.pth",map_location=device))
     print("now_test_sequence!")
 
     # 異常検知したい画像
@@ -174,6 +177,13 @@ elif a.mode=="test":
     G_updates.eval()
     z_out_real = E_updates(test_images.to(device))
     imges_reconstract = G_updates(z_out_real)
+    print("imges_reconstract.size()",imges_reconstract.size())
+    
+    for i in range(val_size):
+        img1 = imges_reconstract[i]
+        # img1 = img1.numpy() # TypeError: tensor or list of tensors expected, got <class 'numpy.ndarray'>
+        save_image(img1,generated_img+"img"+str(i)+".png")
+
 
     a_score=Anomaly_score()
     # 損失を求める
