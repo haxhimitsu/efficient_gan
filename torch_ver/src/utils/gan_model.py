@@ -29,7 +29,7 @@ from torchvision import transforms
 #256pixel-64
 class Generator(nn.Module):
 
-    def __init__(self, z_dim=20):
+    def __init__(self, z_dim=30):
         super(Generator, self).__init__()
 
         self.layer1 = nn.Sequential(
@@ -69,7 +69,7 @@ class Generator(nn.Module):
 
 class Discriminator(nn.Module):
     
-    def __init__(self, z_dim=20):
+    def __init__(self, z_dim=30):
         super(Discriminator, self).__init__()
 
         # 画像側の入力処理
@@ -122,7 +122,7 @@ class Discriminator(nn.Module):
 
 class Encoder(nn.Module):
     
-    def __init__(self, z_dim=20):
+    def __init__(self, z_dim=30):
         super(Encoder, self).__init__()
 
         self.layer1 = nn.Sequential(
