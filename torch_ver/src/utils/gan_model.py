@@ -49,7 +49,7 @@ class Generator(nn.Module):
             nn.ReLU(inplace=True))
 
         self.last = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=64, out_channels=3,
+            nn.ConvTranspose2d(in_channels=64, out_channels=1,
                                kernel_size=4, stride=2, padding=1),
             nn.Tanh())
         # 注意：出力チャネルは3つだけ
@@ -74,7 +74,7 @@ class Discriminator(nn.Module):
 
         # 画像側の入力処理
         self.x_layer1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=4,
+            nn.Conv2d(1, 64, kernel_size=4,
                       stride=2, padding=1),
             nn.LeakyReLU(0.1, inplace=True))
         # 注意：入力チャネルは3
@@ -126,7 +126,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3,
+            nn.Conv2d(1, 32, kernel_size=3,
                       stride=1),
             nn.LeakyReLU(0.1, inplace=True))
         # 注意：白黒画像なので入力チャネルは1つだけ
