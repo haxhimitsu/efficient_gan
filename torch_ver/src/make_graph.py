@@ -36,7 +36,7 @@ for row in f:
     #rowはList
     #row[0]で必要な項目を取得することができる
     data_class.append(row[0])
-    result.append(row[2])
+    result.append(float(row[2]))
 
 print(data_class)
 print(result)
