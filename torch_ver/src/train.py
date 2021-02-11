@@ -34,7 +34,7 @@ class train:
         criterion = nn.BCEWithLogitsLoss(reduction='mean')
 
         # パラメータをハードコーディング
-        z_dim = 20
+        z_dim = 30
         mini_batch_size = 64
 
         # ネットワークをGPUへ
